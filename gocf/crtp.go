@@ -1,28 +1,31 @@
 package gocf
 
-//import ()
+import (
+	"bytes"
+	"encoding/binary"
+	"log"
+)
 
 // High level Commanding funcitons
 func (c *CrazyRadio) SetPoint(roll, pitch, yaw float32, thrust uint16) {
 	roll = 0.707 * (roll - pitch)
 	pitch = 0.707 * (roll + pitch)
 
-	p := &packet{
-		port: 1,
-		data: 1,
+	buf := new(bytes.Buffer)
+	var data = []interface{}{
+		roll,
+		pitch,
+		yaw,
+		thrust,
+	}
+	for _, v := range data {
+		err := binary.Write(buf, binary.LittleEndian, roll)
+		if err != nil {
+			log.Println("binary.Write failed: ", err)
+		}
 	}
 
-	c.sendPacket(dataOut)
-	/*
-	   	if self._x_mode:
-	               roll = 0.707 * (roll - pitch)
-	               pitch = 0.707 * (roll + pitch)
-
-	           pk = CRTPPacket()
-	           pk.port = CRTPPort.COMMANDER
-	           pk.data = struct.pack('<fffH', roll, -pitch, yaw, thrust)
-	           self._cf.send_packet(pk)
-	*/
+	c.pacman <- pac
 }
 
 /*

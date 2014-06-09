@@ -2,24 +2,29 @@ package gocf
 
 import (
 	"bytes"
+	"fmt"
+	"log"
 )
 
-func Init() *CrazyRadio {
-	c := &CrazyRadio{}
+func Init() (*CrazyRadio, error) {
+	c := &CrazyRadio{
+		pacman: make(chan packet),
+		pacs:   []packet{},
+	}
 
-	// data channel
-	dc := make(chan packet)
-	go c.packetHandler(dc)
+	// Handle packets
+	go c.packetHandler()
 
-	return c
+	return c, nill
 }
 
 type packet struct {
-	data    []byte
-	port    uint8
-	channel uint8
-	//payload   []byte
+	data      []byte
+	port      uint8
+	channel   uint8
+	payload   []byte
 	writeable bool
+	typ       string
 }
 
 // Create a new packet for the crazyflie
@@ -39,31 +44,47 @@ func newPacket(data []byte) *packet {
 	return p
 }
 
-// Handle packets on data out
-func (c *CrazyRadio) packetHandler(pc chan packet) {
+func (c *CrazyRadio) packetHandler() {
+	ship := make(chan bool, 1)
 	for {
-		p := <-pc
-		go c.sendPacket(p.data) // Should do channel checking
+		select {
+		case pac := <-c.pacman:
+			c.pacs = append(c.pacs, pac)
+			ship <- true
+		case <-ship:
+			if len(c.pacs) > 0 {
+				go c.packetManager(ship)
+			} else {
+				c.pacman <- c.pacman
+			}
+		}
 	}
 }
 
-/*
-function Crazypacket(data)
-{
-if (data)
-{
-this.data = data;
-this._port = (this.data[0] & 0xF0) >> 4;
-this._channel = this.data[0] & 0x03;
-this.payload = data.slice(1);
-this._writable = false;
+func (c *CrazyRadio) packetManager(ship chan bool) {
+	pac := c.packetPop(0)
+	typ := pac.typ
+	for i, p := range c.pacs {
+		if p.typ == typ {
+			pac = c.packetPop(i)
+		}
+	}
+
+	c.packetShip(pac)
+	ship <- true
 }
-else
-{
-this.data = new Buffer(32);
-this.data.fill(0);
-this._writable = true;
+
+func (c *CrazyRadio) packetShip(pac packet) {
+	ack, err := c.sendPacket(pac.payload)
+	if err != nil {
+		log.Println("Packet err: ", err)
+		c.pacs = append([]packet{pac}, c.pacs...)
+	}
+	// Retry ...
 }
-this.pointer = 1;
+
+func (c *CrazyRadio) packetPop(i int) packet {
+	pac := c.pacs[i]
+	c.pacs = append(c.pacs[:i], c.pacs[i+1]...)
+	return pac
 }
-*/

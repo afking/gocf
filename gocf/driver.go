@@ -52,6 +52,8 @@ type CrazyRadio struct {
 	datarate int16
 	//pingTimer    int16
 	//pingInterval int16
+	pacman chan packet
+	pacs   []packet
 }
 
 func CrazyRadioDrive() error {
