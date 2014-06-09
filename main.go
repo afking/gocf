@@ -6,6 +6,10 @@ import (
 )
 
 func main() {
+	// Initialise
+	c := lib.Init()
+
+	// Run commands
 	/*
 		// Setup driver
 		ctx, dev, err := driver.Drive(true) // Currently debugging

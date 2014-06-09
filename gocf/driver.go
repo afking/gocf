@@ -1,5 +1,5 @@
 // lsusb lists attached USB devices.
-package lib
+package gocf
 
 import (
 	"fmt"
@@ -237,6 +237,14 @@ func (c *CrazyRadio) sendPacket(dataOut []byte) (Ack, error) {
 	ackIn.data = data[1:]
 
 	return ackIn, nil
+}
+
+func (c *CrazyRadio) Write(data []byte) error {
+	_, err := c.outEndpoint.Write(data)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 /*

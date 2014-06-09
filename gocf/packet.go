@@ -1,19 +1,31 @@
-package lib
+package gocf
 
 import (
-//	""
+	"bytes"
 )
 
+func Init() *CrazyRadio {
+	c := &CrazyRadio{}
+
+	// data channel
+	dc := make(chan packet)
+	go c.packetHandler(dc)
+
+	return c
+}
+
 type packet struct {
-	data      []byte
-	port      uint8
-	channel   uint8
-	payload   []byte
+	data    []byte
+	port    uint8
+	channel uint8
+	//payload   []byte
 	writeable bool
 }
 
-func CrazyPacket(data [32]byte) *packet {
+// Create a new packet for the crazyflie
+func newPacket(data []byte) *packet {
 	p := &packet{}
+	var b byt
 	if data != [32]byte{} {
 		p.data = data
 		p.port = (data[0] & 0xF0) >> 4
@@ -25,6 +37,14 @@ func CrazyPacket(data [32]byte) *packet {
 		p.writeable = true
 	}
 	return p
+}
+
+// Handle packets on data out
+func (c *CrazyRadio) packetHandler(pc chan packet) {
+	for {
+		p := <-pc
+		go c.sendPacket(p.data) // Should do channel checking
+	}
 }
 
 /*
