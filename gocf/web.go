@@ -9,7 +9,7 @@ import (
 func web() {
 	port := "8080"
 
-	http.HandleFunc("/", webServer)
+	http.HandleFunc("/", errorHandler(webServer))
 
 	log.Println("Running on Port:", port)
 	err := http.ListenAndServe(":"+port, nil)

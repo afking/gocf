@@ -8,30 +8,17 @@ import (
 
 func main() {
 	// Initialise
-	c, err := lib.Init()
-	//defer c.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
+	c := gocf.Init()
+	defer c.Close()
+
 	log.Println("Initialised")
 
 	// Main function commands
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 5; i++ {
 		c.SetPoint(0, 0, 0, 20000)
-		time.Sleep(time.Second * 0.1)
+		log.Println("Sending Packet ...")
+		time.Sleep(time.Millisecond * 100)
 	}
-
-	// Close ports
-
-	// Run commands
-	/*
-		// Setup driver
-		ctx, dev, err := driver.Drive(true) // Currently debugging
-		if err != nil {
-			log.Fatal("CrazyRadio driver error: ", err)
-		}
-		defer driver.Close(ctx, dev)
-
-		//dev.Open
-	*/
+	time.Sleep(time.Millisecond * 1000)
+	log.Println("Closing")
 }

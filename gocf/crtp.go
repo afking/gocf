@@ -6,6 +6,60 @@ import (
 	"log"
 )
 
+func Init() *CrazyRadio {
+	c := &CrazyRadio{
+		pacman: make(chan *packet),
+		pacs:   []*packet{},
+	}
+
+	// Start radio
+	err := c.CrazyRadioDrive()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Find Crazyflie
+	cfs := c.scanAtRate()
+
+	// Connect
+	c.setChannel(cfs[0])
+	log.Printf("Connected to channel: %d", cfs[0])
+
+	// Handle packets
+	go c.packetHandler()
+
+	return c
+}
+
+type CrazyDriver struct {
+	uri      string
+	channel  uint16
+	datarate uint16
+	radio    CrazyRadio
+}
+
+// Just scan at 2MBPS
+func (c *CrazyRadio) scanAtRate() []uint16 {
+	cfs := []uint16{}
+	c.setDataRate(2) // Default atm
+	var b = []uint8{0xFF}
+	n, err := c.scanChannels(0, 127, b)
+	if err != nil {
+		log.Println(n)
+		log.Fatal("scanAtRate error: ", err)
+	}
+	for i := 0; i < len(n); i++ {
+		if n[i] != 0 {
+			log.Printf("radio://1/%d/2MBPS", n[i])
+			cfs = append(cfs, uint16(n[i]))
+		}
+	}
+	if len(cfs) == 0 {
+		log.Fatal("No Crazyflies Detected")
+	}
+	return cfs
+}
+
 // High level Commanding funcitons
 func (c *CrazyRadio) SetPoint(roll, pitch, yaw float32, thrust uint16) {
 	roll = 0.707 * (roll - pitch)
@@ -19,116 +73,14 @@ func (c *CrazyRadio) SetPoint(roll, pitch, yaw float32, thrust uint16) {
 		thrust,
 	}
 	for _, v := range data {
-		err := binary.Write(buf, binary.LittleEndian, roll)
+		err := binary.Write(buf, binary.LittleEndian, v)
 		if err != nil {
 			log.Println("binary.Write failed: ", err)
 		}
 	}
 
+	pac := newPacket(buf.Bytes(), "SetPoint")
+
+	// Sends packet to packetHandler on channel pacman
 	c.pacman <- pac
 }
-
-/*
-CrazyDriver.prototype.setpoint = function(roll, pitch, yaw, thrust)
-{
-var self = this,
-deferred = P.defer();
-
-var packet = new Crazypacket();
-packet.port = Protocol.Ports.COMMANDER;
-
-packet.writeFloat(roll)
-.writeFloat(-pitch)
-.writeFloat(yaw)
-.writeUnsignedShort(thrust)
-.endPacket();
-
-return this.radio.sendPacket(packet)
-.then(function(item)
-{
-return item;
-})
-.fail(function(err)
-{
-console.log('failure in setpoint');
-console.log(err);
-});
-};
-
-/ header management
-
-Crazypacket.prototype.updateHeader = function()
-{
-this.data[0] = ((this._port & 0x0f) << 4 | 0x3 << 2 | (this._channel & 0x03));
-};
-
-Crazypacket.prototype.getHeader = function()
-{
-return this.data[0];
-};
-
-Crazypacket.prototype.setHeader = function(value)
-{
-this.data[0] = value;
-return this;
-};
-
-Crazypacket.prototype.__defineGetter__('header', Crazypacket.prototype.getHeader);
-Crazypacket.prototype.__defineSetter__('header', Crazypacket.prototype.setHeader);
-
-Crazypacket.prototype.setChannel = function(value)
-{
-this._channel = value;
-this.updateHeader();
-return this;
-};
-
-Crazypacket.prototype.getChannel = function(value)
-{
-return this._channel;
-};
-
-Crazypacket.prototype.__defineGetter__('channel', Crazypacket.prototype.getChannel);
-Crazypacket.prototype.__defineSetter__('channel', Crazypacket.prototype.setChannel);
-
-
-Crazypacket.prototype.setPort = function(value)
-{
-this._port = value;
-this.updateHeader();
-return this;
-};
-
-Crazypacket.prototype.getPort = function(value)
-{
-return this._port;
-};
-
-Crazypacket.prototype.__defineGetter__('port', Crazypacket.prototype.getPort);
-Crazypacket.prototype.__defineSetter__('port', Crazypacket.prototype.setPort);
-
-
-// --------------------------------------------
-
-function RadioAck(buffer)
-{
-this.ack = false;
-this.powerDet = false;
-this.retry = 0;
-this.data = undefined;
-
-if (buffer)
-this.parse(buffer);
-}
-
-RadioAck.prototype.parse = function(buffer)
-{
-this.ack = (buffer[0] & 0x01) !== 0;
-this.powerDet = (buffer[0] & 0x02) !== 0;
-this.retry = buffer[0] >> 4;
-this.data = buffer.slice(1);
-this.packet = new Crazypacket(this.data);
-};
-
-// --------------------------------------------
-*/
