@@ -73,9 +73,11 @@ func (c *CrazyRadio) packetHandler() {
 func (c *CrazyRadio) packetManager(ship chan bool) {
 	pac := c.packetPop(0)
 	typ := pac.typ
+	alt := 0
 	for i, p := range c.pacs {
 		if p.typ == typ {
-			pac = c.packetPop(i)
+			pac = c.packetPop(i + alt)
+			alt += -1
 		}
 	}
 

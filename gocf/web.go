@@ -1,15 +1,16 @@
 package gocf
 
 import (
+	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"log"
 	"net/http"
 )
 
 func web() {
-	port := "8080"
+	port := "4000"
 
-	http.HandleFunc("/", errorHandler(webServer))
+	http.Handle("/", websocket.Handler(errorHandler(socketHandler)))
 
 	log.Println("Running on Port:", port)
 	err := http.ListenAndServe(":"+port, nil)
@@ -27,7 +28,14 @@ func errorHandler(f func(w http.ResponseWriter, r *http.Request) error) http.Han
 	}
 }
 
-func webServer(w http.ResponseWriter, r *http.Request) error {
+func server(w http.ResponseWriter, r *http.Request) error {
 	fmt.Fprint(w, "Hello crazyflie")
 	return nil
+}
+
+func socketHandler(c *websocket) {
+	var s string
+	fmt.Fscan(c, &s)
+	fmt.Println("Received: ", s)
+	fmt.Fprint(c, "How do you do?")
 }
