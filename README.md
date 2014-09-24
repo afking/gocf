@@ -36,4 +36,4 @@ apt-get install -y libusb-dev
 
 ## Control 
 
-API being developed, look into files. 
+API being developed, look into files. Unfinished main control by setpoint command.
